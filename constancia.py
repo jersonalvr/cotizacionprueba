@@ -223,9 +223,9 @@ def download_rnssc_pdf(dni, output_directory):
 
 def combinar_pdfs(output_directory, output_filename):
     """
-    Combina los archivos PDF en un solo PDF y elimina los archivos temporales con logging detallado.
+    Combina los archivos PDF en un solo PDF y elimina los archivos temporales.
     """
-    logger.info("Iniciando proceso de combinación de PDFs")
+    logger = logging.getLogger('constancia')
     
     # Esperar unos segundos para asegurarse de que los archivos hayan sido generados
     time.sleep(5)
@@ -294,21 +294,26 @@ def combinar_pdfs(output_directory, output_filename):
                 except Exception as e:
                     logger.error(f"Error al eliminar el archivo {pdf}: {str(e)}")
         
-        except Exception as merge_error:
-            logger.error(f"Error al combinar PDFs: {str(merge_error)}", exc_info=True)
+        except Exception as e:
+        logger = logging.getLogger('constancia')
+        logger.error(f"Error al combinar PDFs: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
     else:
         logger.warning("No hay PDFs para combinar.")
 
 def descargar_constancias(ruc, dni, output_dir):
     """
-    Función principal para descargar constancias RNP, RUC y RNSSC con logging detallado
+    Función principal para descargar constancias RNP, RUC y RNSSC
     """
-    logger.info(f"Iniciando descarga de constancias para RUC: {ruc}, DNI: {dni}")
+    # Configurar logging
+    logging.basicConfig(level=logging.INFO, 
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger('constancia')
     
     try:
         # Crear directorio de salida si no existe
         os.makedirs(output_dir, exist_ok=True)
-        logger.debug(f"Directorio de salida: {output_dir}")
         
         # Configurar driver
         driver = configure_selenium_driver(output_dir)
@@ -335,36 +340,18 @@ def descargar_constancias(ruc, dni, output_dir):
             output_filename = '5. RNP, RUC, RNSSC.pdf'
             combinar_pdfs(output_dir, output_filename)
             
-            logger.success("Proceso de descarga completado exitosamente")
+            logger.info("Proceso de descarga completado exitosamente")
             
             # Devolver la ruta del PDF combinado
-            output_path = os.path.join(output_dir, output_filename)
-            
-            # Verificar que el archivo combinado existe
-            if os.path.exists(output_path):
-                logger.info(f"PDF combinado encontrado en: {output_path}")
-                file_size = os.path.getsize(output_path)
-                logger.debug(f"Tamaño del PDF combinado: {file_size} bytes")
-                return output_path
-            else:
-                logger.error("El archivo PDF combinado no se encontró después de la combinación")
-                return None
-        
-        except Exception as process_error:
-            logger.error(f"Error durante el proceso de descarga de constancias: {str(process_error)}", exc_info=True)
-            return None
+            return os.path.join(output_dir, output_filename)
         
         finally:
             # Cerrar el driver
             if driver:
-                try:
-                    driver.quit()
-                    logger.info("Driver de Selenium cerrado correctamente")
-                except Exception as driver_close_error:
-                    logger.error(f"Error al cerrar el driver: {str(driver_close_error)}")
+                driver.quit()
     
-    except Exception as main_error:
-        logger.error(f"Error general en la descarga de constancias: {str(main_error)}", exc_info=True)
+    except Exception as e:
+        logger.error(f"Error en la descarga de constancias: {e}")
         return None
 
 # Configuración adicional para manejar el registro
