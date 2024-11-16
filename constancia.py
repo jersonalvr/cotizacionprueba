@@ -50,12 +50,6 @@ def configure_selenium_driver(output_dir):
         return None
     
 def descargar_constancias(ruc, dni, output_dir):
-    """
-    Función principal para descargar constancias RNP, RUC y RNSSC
-    """
-    # Configurar logging
-    logging.basicConfig(level=logging.INFO)
-    
     try:
         # Crear directorio de salida si no existe
         os.makedirs(output_dir, exist_ok=True)
@@ -64,28 +58,28 @@ def descargar_constancias(ruc, dni, output_dir):
         driver = configure_selenium_driver(output_dir)
         
         if not driver:
-            login.error("No se pudo configurar el driver de Selenium")
+            logging.error("No se pudo configurar el driver de Selenium")
             return None
         
         try:
             # 1. Descargar RNP
-            login.info("Descargando constancia RNP...")
+            logging.info("Descargando constancia RNP...")
             download_rnp_certificate(ruc, output_dir, driver)
             
             # 2. Descargar RUC SUNAT
-            login.info("Descargando constancia RUC...")
+            logging.info("Descargando constancia RUC...")
             download_sunat_ruc_pdf(ruc, output_dir, driver)
             
             # 3. Descargar RNSSC
-            login.info("Descargando constancia RNSSC...")
+            logging.info("Descargando constancia RNSSC...")
             download_rnssc_pdf(dni, output_dir)
             
             # 4. Combinar PDFs
-            login.info("Combinando PDFs...")
+            logging.info("Combinando PDFs...")
             output_filename = '5. RNP, RUC, RNSSC.pdf'
             combinar_pdfs(output_dir, output_filename)
             
-            login.success("Proceso de descarga completado exitosamente")
+            logging.info("Proceso de descarga completado exitosamente")
             
             # Devolver la ruta del PDF combinado
             return os.path.join(output_dir, output_filename)
@@ -96,7 +90,7 @@ def descargar_constancias(ruc, dni, output_dir):
                 driver.quit()
     
     except Exception as e:
-        login.error(f"Error en la descarga de constancias: {e}")
+        logging.error(f"Error en la descarga de constancias: {e}")
         return None
 
 def download_rnp_certificate(ruc, output_dir, driver):
@@ -223,8 +217,7 @@ def combinar_pdfs(output_directory, output_filename):
     time.sleep(5)
 
     # Obtener la lista de archivos PDF en el directorio de salida
-    pdf_files = os.listdir(output_directory)
-    pdf_files = [f for f in pdf_files if f.endswith('.pdf')]
+    pdf_files = [f for f in os.listdir(output_directory) if f.endswith('.pdf')]
     
     # Identificar los archivos PDF individuales
     pdf_rnp = None
@@ -232,25 +225,30 @@ def combinar_pdfs(output_directory, output_filename):
     pdf_rnssc = None
 
     for filename in pdf_files:
-        if 'CONSTANCIA DEL RNP' in filename or 'RNP_' in filename:
+        if any(keyword in filename.upper() for keyword in ['RNP', 'REGISTRO NACIONAL DE PROVEEDORES']):
             pdf_rnp = os.path.join(output_directory, filename)
-        elif 'SUNAT - Consulta RUC' in filename or 'SUNAT_' in filename:
+        elif any(keyword in filename.upper() for keyword in ['RUC', 'SUNAT']):
             pdf_ruc = os.path.join(output_directory, filename)
-        elif 'ConsultaSinResultados_sancionID' in filename:
+        elif 'RNSSC' in filename or 'ConsultaSinResultados' in filename:
             pdf_rnssc = os.path.join(output_directory, filename)
     
     # Verificar que se encontraron todos los PDFs
     pdf_list = []
     if pdf_rnp:
         pdf_list.append(pdf_rnp)
+        print(f"PDF de RNP encontrado: {pdf_rnp}")
     else:
         print("No se encontró el PDF de RNP.")
+    
     if pdf_ruc:
         pdf_list.append(pdf_ruc)
+        print(f"PDF de RUC encontrado: {pdf_ruc}")
     else:
         print("No se encontró el PDF de RUC.")
+    
     if pdf_rnssc:
         pdf_list.append(pdf_rnssc)
+        print(f"PDF de RNSSC encontrado: {pdf_rnssc}")
     else:
         print("No se encontró el PDF de RNSSC.")
     
@@ -275,3 +273,4 @@ def combinar_pdfs(output_directory, output_filename):
                 print(f"Error al eliminar el archivo {pdf}: {str(e)}")
     else:
         print("No hay PDFs para combinar.")
+        return None
