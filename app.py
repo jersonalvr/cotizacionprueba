@@ -25,7 +25,6 @@ logging.basicConfig(
 level=logging.INFO, 
 format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger('constancia')
 def verificar_configuracion_selenium():
     """
     Diagnóstico completo de la configuración de Selenium
