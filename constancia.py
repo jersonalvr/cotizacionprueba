@@ -14,10 +14,7 @@ from datetime import datetime
 # Configurar logging más detallado
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),  # Muestra logs en consola
-    ]
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
 def configure_selenium_driver(output_dir):
