@@ -69,53 +69,36 @@ def configure_selenium_driver(output_dir):
         logger.error(f"Error al configurar el driver de Selenium: {e}", exc_info=True)
         return None
 
-def download_rnp_certificate(ruc, output_dir, driver=None):
-    if driver is None:
-        # Configurar driver si no se proporciona
-        driver = configure_selenium_driver(output_dir)
-    
+def download_rnp_certificate(ruc, output_dir, driver):
     try:
         logger.info(f"Iniciando descarga de certificado RNP para RUC: {ruc}")
         
-        # Navegar a la página del certificado RNP con el RUC
+        # URL de RNP
         url = f"https://www.rnp.gob.pe/Constancia/RNP_Constancia/default_Todos.asp?RUC={ruc}"
         driver.get(url)
-        logger.debug(f"URL de RNP accedida: {url}")
         
-        # Esperar alerta si está presente y aceptarla
-        try:
-            WebDriverWait(driver, 5).until(EC.alert_is_present())
-            alert = driver.switch_to.alert
-            alert_text = alert.text
-            logger.info(f"Alerta detectada: {alert_text}")
-            alert.accept()
-        except Exception as e:
-            logger.debug(f"No hay alerta presente: {e}")
-        
-        # Esperar a que el botón de imprimir esté presente
+        # Esperar y hacer clic en botón de impresión
         print_button = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "btnPrint"))
         )
-        logger.info("Botón de impresión encontrado")
-        
-        # Activar impresión (que guardará como PDF con nuestras opciones)
         print_button.click()
         
         # Esperar a que se complete la descarga
         time.sleep(3)
         
         # Verificar archivos descargados
-        archivos = os.listdir(output_directory)
+        archivos = os.listdir(output_dir)
         pdf_rnp = [f for f in archivos if 'RNP_' in f and f.endswith('.pdf')]
         
         if pdf_rnp:
-            logger.info(f"Certificado RNP descargado: {pdf_rnp[0]}")
-            return os.path.join(output_directory, pdf_rnp[0])
+            logger.warning(f"Certificado RNP descargado: {pdf_rnp[0]}")
+            return os.path.join(output_dir, pdf_rnp[0])
         else:
-            logger.warning("No se encontró archivo PDF de RNP después de la descarga")
+            logger.error("No se encontró archivo PDF de RNP")
             return None
+        
     except Exception as e:
-        logger.error(f"Error detallado para RUC {ruc} en RNP: {str(e)}", exc_info=True)
+        logger.error(f"Error en descarga RNP para RUC {ruc}: {str(e)}")
         raise
 
 def download_sunat_ruc_pdf(ruc, output_dir, driver=None):
@@ -364,41 +347,49 @@ def descargar_constancias(ruc, dni, output_dir):
         logger.error(f"Error en la descarga de constancias: {e}", exc_info=True)
         return None
 
-# Configuración adicional para manejar el registro
 def setup_logging():
     """
     Configuración optimizada de logging
     """
-    # Usar un formateador más simple
+    # Crear un formateador más conciso
     formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s', 
+        '%(asctime)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    # Configurar manejador de consola con menos detalle
+    # Configurar manejador de consola solo para mensajes importantes
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.WARNING)  # Cambiar a WARNING para reducir logs
+    console_handler.setLevel(logging.WARNING)  # Solo mostrar warnings y errores
     console_handler.setFormatter(formatter)
 
-    # Configurar manejador de archivo con menos frecuencia de escritura
-    file_handler = logging.FileHandler('constancia_scraping.log', delay=True)
-    file_handler.setLevel(logging.ERROR)  # Solo guardar errores en archivo
+    # Configurar manejador de archivo para logs de debug
+    file_handler = logging.FileHandler('scraping.log')
+    file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
 
-    # Obtener el logger de manera más eficiente
+    # Configurar el logger principal
     logger = logging.getLogger('constancia')
-    logger.setLevel(logging.ERROR)  # Nivel de error más alto
+    logger.setLevel(logging.INFO)  # Nivel base de información
     
-    # Limpiar manejadores de forma más segura
-    if logger.handlers:
-        for handler in logger.handlers[:]:
-            logger.removeHandler(handler)
+    # Limpiar cualquier manejador existente
+    logger.handlers.clear()
     
-    # Agregar manejadores de forma más ligera
+    # Agregar los nuevos manejadores
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
 
     return logger
+
+# Configuración de logging más ligera
+def configure_minimal_logging():
+    logging.basicConfig(
+        level=logging.WARNING,  # Solo warnings y errores
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(),  # Consola
+            logging.FileHandler('scraping_errors.log')  # Archivo solo para errores
+        ]
+    )
 
 # Método para agregar un método de éxito personalizado
 def add_success_method():
