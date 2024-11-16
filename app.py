@@ -20,6 +20,12 @@ import pyperclip
 from st_copy_to_clipboard import st_copy_to_clipboard
 from streamlit_image_comparison import image_comparison
 from constancia import combinar_pdfs
+import logging
+
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 # Determinar la ruta base de la aplicación
 base_dir = os.path.dirname(os.path.abspath(__file__))
