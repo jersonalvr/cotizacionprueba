@@ -22,7 +22,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger('constancia')
 
-def configure_selenium_driver(output_directory):
+def configure_selenium_driver(output_dir):
     """
     Configura el driver de Selenium con logging detallado
     """
@@ -36,19 +36,29 @@ def configure_selenium_driver(output_directory):
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--disable-gpu')  # Añadir esta línea
+        chrome_options.add_argument('--remote-debugging-port=9222')  # Añadir esta línea
         
         # Preferencias de descarga
         prefs = {
-            'download.default_directory': output_directory,
+            'download.default_directory': output_dir,
             'download.prompt_for_download': False,
             'download.directory_upgrade': True,
-            'plugins.always_open_pdf_externally': True
+            'plugins.always_open_pdf_externally': True,
+            'safebrowsing.enabled': True  # Añadir esta línea
         }
         chrome_options.add_experimental_option('prefs', prefs)
 
+        # Usar ChromeDriverManager con manejo de errores
+        try:
+            driver_path = ChromeDriverManager().install()
+        except Exception as e:
+            logger.error(f"Error al instalar ChromeDriverManager: {e}")
+            driver_path = '/usr/local/bin/chromedriver'  # Ruta predeterminada en algunos entornos
+
         # Inicializar el driver
         driver = webdriver.Chrome(
-            service=Service(ChromeDriverManager().install()), 
+            service=Service(driver_path), 
             options=chrome_options
         )
         
@@ -302,21 +312,21 @@ def combinar_pdfs(output_directory, output_filename):
     else:
         logger.warning("No hay PDFs para combinar.")
 
-def descargar_constancias(ruc, dni, output_directory):
+def descargar_constancias(ruc, dni, output_dir):
     """
     Función principal para descargar constancias RNP, RUC y RNSSC
     """
-    # Configurar logging
-    logging.basicConfig(level=logging.INFO, 
-                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger('constancia')
+    # Asegurar permisos de escritura
+    os.makedirs(output_dir, exist_ok=True)
+    os.chmod(output_dir, 0o777)  # Dar permisos completos
     
     try:
-        # Crear directorio de salida si no existe
-        os.makedirs(output_directory, exist_ok=True)
+        # Logging más detallado
+        logger.info(f"Directorio de descarga: {output_dir}")
+        logger.info(f"Contenido inicial del directorio: {os.listdir(output_dir)}")
         
         # Configurar driver
-        driver = configure_selenium_driver(output_directory)
+        driver = configure_selenium_driver(output_dir)
         
         if not driver:
             logger.error("No se pudo configurar el driver de Selenium")
@@ -325,25 +335,33 @@ def descargar_constancias(ruc, dni, output_directory):
         try:
             # 1. Descargar RNP
             logger.info("Descargando constancia RNP...")
-            download_rnp_certificate(ruc, output_directory, driver)
+            rnp_file = download_rnp_certificate(ruc, output_dir, driver)
+            logger.info(f"Archivo RNP: {rnp_file}")
             
             # 2. Descargar RUC SUNAT
             logger.info("Descargando constancia RUC...")
-            download_sunat_ruc_pdf(ruc, output_directory, driver)
+            ruc_file = download_sunat_ruc_pdf(ruc, output_dir, driver)
+            logger.info(f"Archivo RUC: {ruc_file}")
             
             # 3. Descargar RNSSC
             logger.info("Descargando constancia RNSSC...")
-            download_rnssc_pdf(dni, output_directory)
+            rnssc_file = download_rnssc_pdf(dni, output_dir)
+            logger.info(f"Archivo RNSSC: {rnssc_file}")
+            
+            # Logging de archivos encontrados
+            logger.info(f"Archivos en directorio después de descargas: {os.listdir(output_dir)}")
             
             # 4. Combinar PDFs
             logger.info("Combinando PDFs...")
             output_filename = '5. RNP, RUC, RNSSC.pdf'
-            combinar_pdfs(output_directory, output_filename)
+            combinar_pdfs(output_dir, output_filename)
             
             logger.info("Proceso de descarga completado exitosamente")
             
             # Devolver la ruta del PDF combinado
-            return os.path.join(output_directory, output_filename)
+            combined_path = os.path.join(output_dir, output_filename)
+            logger.info(f"Ruta del PDF combinado: {combined_path}")
+            return combined_path
         
         finally:
             # Cerrar el driver
@@ -351,7 +369,7 @@ def descargar_constancias(ruc, dni, output_directory):
                 driver.quit()
     
     except Exception as e:
-        logger.error(f"Error en la descarga de constancias: {e}")
+        logger.error(f"Error en la descarga de constancias: {e}", exc_info=True)
         return None
 
 # Configuración adicional para manejar el registro
