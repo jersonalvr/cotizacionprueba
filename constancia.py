@@ -175,9 +175,6 @@ def download_sunat_ruc_pdf(ruc, output_dir, driver=None):
         else:
             logger.warning("No se encontró archivo PDF de RUC después de la descarga")
             return None
-        finally:
-        if driver and not isinstance(driver, webdriver.Chrome):
-            driver.quit()
     except Exception as e:
         logger.error(f"Error detallado para RUC {ruc} en SUNAT: {str(e)}", exc_info=True)
         raise
