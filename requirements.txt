@@ -18,3 +18,4 @@ PyPDF2==3.0.1
 thread6
 llvmlite
 numba
+urllib3
