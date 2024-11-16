@@ -114,11 +114,6 @@ def download_rnp_certificate(ruc, output_dir, driver=None):
         else:
             logger.warning("No se encontró archivo PDF de RNP después de la descarga")
             return None
-        finally:
-        # Cerrar driver solo si se creó en esta función
-        if driver and not isinstance(driver, webdriver.Chrome):
-            driver.quit()
-            
     except Exception as e:
         logger.error(f"Error detallado para RUC {ruc} en RNP: {str(e)}", exc_info=True)
         raise
