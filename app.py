@@ -19,7 +19,7 @@ import zipfile
 import pyperclip
 from st_copy_to_clipboard import st_copy_to_clipboard
 from streamlit_image_comparison import image_comparison
-from constancia import (combinar_pdfs, configure_selenium_driver, download_rnp_certificate, download_sunat_ruc_pdf, download_rnssc_pdf, descargar_constancias, setup_logging, add_success_method)
+import constancia
 import logging
 logging.basicConfig(
 level=logging.INFO, 
