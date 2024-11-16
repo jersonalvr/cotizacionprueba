@@ -52,45 +52,34 @@ def verificar_configuracion_selenium():
         logger.error(f"Error en verificación de configuración: {e}")
 
 def descargar_constancias_debug(ruc, dni):
-    """
-    Versión de depuración de la descarga de constancias
-    """
     try:
         # Crear directorio de trabajo
-        output_dir = '/mount/src/cotizacionprueba'
+        output_dir = './descargas'
         os.makedirs(output_dir, exist_ok=True)
         
-        # Logging extensivo
-        logger.debug(f"Intentando descargar constancias para RUC: {ruc}, DNI: {dni}")
-        logger.debug(f"Directorio de descargas: {os.path.abspath(output_dir)}")
+        # Configurar driver una vez
+        driver = configure_selenium_driver(output_dir)
         
-        # Verificar permisos
-        logger.debug(f"Permisos del directorio: {oct(os.stat(output_dir).st_mode)[-3:]}")
-        
-        # Intentar descargas individuales con más logging
         try:
             # Descarga RNP
             logger.debug("Iniciando descarga RNP")
-            rnp_file = download_rnp_certificate(ruc, output_dir)
+            rnp_file = download_rnp_certificate(ruc, output_dir, driver)
             logger.debug(f"Resultado descarga RNP: {rnp_file}")
-        except Exception as e:
-            logger.error(f"Error en descarga RNP: {e}", exc_info=True)
-        
-        try:
+            
             # Descarga RUC
             logger.debug("Iniciando descarga RUC")
-            ruc_file = download_sunat_ruc_pdf(ruc, output_dir)
+            ruc_file = download_sunat_ruc_pdf(ruc, output_dir, driver)
             logger.debug(f"Resultado descarga RUC: {ruc_file}")
-        except Exception as e:
-            logger.error(f"Error en descarga RUC: {e}", exc_info=True)
         
-        try:
-            # Descarga RNSSC
-            logger.debug("Iniciando descarga RNSSC")
-            rnssc_file = download_rnssc_pdf(dni, output_dir)
-            logger.debug(f"Resultado descarga RNSSC: {rnssc_file}")
-        except Exception as e:
-            logger.error(f"Error en descarga RNSSC: {e}", exc_info=True)
+        finally:
+            # Cerrar driver
+            if driver:
+                driver.quit()
+        
+        # Descarga RNSSC (no requiere driver)
+        logger.debug("Iniciando descarga RNSSC")
+        rnssc_file = download_rnssc_pdf(dni, output_dir)
+        logger.debug(f"Resultado descarga RNSSC: {rnssc_file}")
         
         # Verificar archivos descargados
         archivos = os.listdir(output_dir)
