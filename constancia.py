@@ -11,6 +11,8 @@ from PyPDF2 import PdfMerger
 import logging
 import requests
 from datetime import datetime
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 def configure_selenium_driver(output_dir):
     """
