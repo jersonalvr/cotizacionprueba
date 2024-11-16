@@ -583,7 +583,7 @@ def main():
                 doc_io = generar_cotizacion(pdf_file, data)
 
                 # Combinar PDFs de constancias
-                combinar_pdfs(output_directory, '5. RNP, RUC, RNSSC.pdf')
+                combinar_pdfs(output_directory, '5. RNP, RUC, RNSSC.pdf', ruc, dni)
 
                 # Crear un archivo ZIP en memoria
                 zip_io = BytesIO()
