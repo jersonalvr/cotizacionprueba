@@ -20,7 +20,6 @@ logging.basicConfig(
         logging.FileHandler('constancia_scraping.log')  # Guarda logs en archivo
     ]
 )
-logger = logging.getLogger('constancia')
 
 def configure_selenium_driver(output_dir):
     """
@@ -346,62 +345,3 @@ def descargar_constancias(ruc, dni, output_dir):
     except Exception as e:
         logger.error(f"Error en la descarga de constancias: {e}", exc_info=True)
         return None
-
-def setup_logging():
-    """
-    Configuración optimizada de logging
-    """
-    # Crear un formateador más conciso
-    formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-
-    # Configurar manejador de consola solo para mensajes importantes
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.WARNING)  # Solo mostrar warnings y errores
-    console_handler.setFormatter(formatter)
-
-    # Configurar manejador de archivo para logs de debug
-    file_handler = logging.FileHandler('scraping.log')
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(formatter)
-
-    # Configurar el logger principal
-    logger = logging.getLogger('constancia')
-    logger.setLevel(logging.INFO)  # Nivel base de información
-    
-    # Limpiar cualquier manejador existente
-    logger.handlers.clear()
-    
-    # Agregar los nuevos manejadores
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
-
-    return logger
-
-# Configuración de logging más ligera
-def configure_minimal_logging():
-    logging.basicConfig(
-        level=logging.WARNING,  # Solo warnings y errores
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(),  # Consola
-            logging.FileHandler('scraping_errors.log')  # Archivo solo para errores
-        ]
-    )
-
-# Método para agregar un método de éxito personalizado
-def add_success_method():
-    """
-    Agrega un método de registro de éxito personalizado
-    """
-    def success(self, message, *args, **kwargs):
-        return self.log(logging.INFO, f"✅ SUCCESS: {message}", *args, **kwargs)
-    
-    logging.Logger.success = success
-
-# Configuración inicial
-setup_logging()
-add_success_method()
-__all__ = ['combinar_pdfs']
