@@ -25,6 +25,81 @@ logging.basicConfig(
 level=logging.INFO, 
 format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+logger = logging.getLogger('constancia')
+def verificar_configuracion_selenium():
+    """
+    Diagnóstico completo de la configuración de Selenium
+    """
+    try:
+        # Verificar dependencias
+        import selenium
+        import webdriver_manager
+        
+        logger.info(f"Versión de Selenium: {selenium.__version__}")
+        logger.info(f"Versión de WebDriver Manager: {webdriver_manager.__version__}")
+        
+        # Verificar variables de entorno
+        logger.info("Variables de entorno:")
+        logger.info(f"PATH: {os.environ.get('PATH')}")
+        logger.info(f"HOME: {os.environ.get('HOME')}")
+        
+        # Verificar directorios de trabajo
+        logger.info("Directorios:")
+        logger.info(f"Directorio actual: {os.getcwd()}")
+        logger.info(f"Contenido del directorio: {os.listdir('.')}")
+        
+    except Exception as e:
+        logger.error(f"Error en verificación de configuración: {e}")
+
+def descargar_constancias_debug(ruc, dni):
+    """
+    Versión de depuración de la descarga de constancias
+    """
+    try:
+        # Crear directorio de trabajo
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Logging extensivo
+        logger.debug(f"Intentando descargar constancias para RUC: {ruc}, DNI: {dni}")
+        logger.debug(f"Directorio de descargas: {os.path.abspath(output_dir)}")
+        
+        # Verificar permisos
+        logger.debug(f"Permisos del directorio: {oct(os.stat(output_dir).st_mode)[-3:]}")
+        
+        # Intentar descargas individuales con más logging
+        try:
+            # Descarga RNP
+            logger.debug("Iniciando descarga RNP")
+            rnp_file = download_rnp_certificate(ruc, output_dir)
+            logger.debug(f"Resultado descarga RNP: {rnp_file}")
+        except Exception as e:
+            logger.error(f"Error en descarga RNP: {e}", exc_info=True)
+        
+        try:
+            # Descarga RUC
+            logger.debug("Iniciando descarga RUC")
+            ruc_file = download_sunat_ruc_pdf(ruc, output_dir)
+            logger.debug(f"Resultado descarga RUC: {ruc_file}")
+        except Exception as e:
+            logger.error(f"Error en descarga RUC: {e}", exc_info=True)
+        
+        try:
+            # Descarga RNSSC
+            logger.debug("Iniciando descarga RNSSC")
+            rnssc_file = download_rnssc_pdf(dni, output_dir)
+            logger.debug(f"Resultado descarga RNSSC: {rnssc_file}")
+        except Exception as e:
+            logger.error(f"Error en descarga RNSSC: {e}", exc_info=True)
+        
+        # Verificar archivos descargados
+        archivos = os.listdir(output_dir)
+        logger.debug(f"Archivos descargados: {archivos}")
+        
+        return archivos
+    
+    except Exception as e:
+        logger.error(f"Error general en descarga de constancias: {e}", exc_info=True)
+        return None
 
 # Determinar la ruta base de la aplicación
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -543,7 +618,25 @@ def main():
     # Mostrar el valor ingresado con formato de moneda
     if oferta_total > 0:
         st.write(f"Monto ingresado: S/ {oferta_total:,.2f}")
-
+    
+    st.title("Descarga de Constancias")
+    # Verificación inicial
+    verificar_configuracion_selenium()
+    if st.button("Descargar Constancias"):
+        with st.spinner("Descargando constancias..."):
+            try:
+                # Llamada a función de debug
+                resultados = descargar_constancias_debug(ruc, dni)
+                
+                if resultados:
+                    st.success("Descarga completada")
+                    st.write("Archivos descargados:", resultados)
+                else:
+                    st.error("No se pudieron descargar las constancias")
+            
+            except Exception as e:
+                st.error(f"Error en la descarga: {e}")
+                
     # Botón de envío
     if st.button("Generar cotizacion"):
         if not all([pdf_file, firma_cargada, dni, st.session_state.direccion, telefono, correo, banco_seleccionado, cuenta, cci, oferta_total]):
