@@ -57,6 +57,7 @@ def descargar_constancias_debug(ruc, dni):
     """
     try:
         # Crear directorio de trabajo
+        output_dir = '/mount/src/cotizacionprueba'
         os.makedirs(output_dir, exist_ok=True)
         
         # Logging extensivo
