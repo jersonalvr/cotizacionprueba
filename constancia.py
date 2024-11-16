@@ -304,11 +304,12 @@ def combinar_pdfs(output_directory, output_filename):
                 except Exception as e:
                     logger.error(f"Error al eliminar el archivo {pdf}: {str(e)}")
         
-        except Exception as e:
-            logger = logging.getLogger('constancia')
-            logger.error(f"Error al combinar PDFs: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
+            pass
+    except Exception as e:
+        import traceback
+        logger = logging.getLogger('constancia')
+        logger.error(f"Error al combinar PDFs: {e}")
+        logger.error(traceback.format_exc())
     else:
         logger.warning("No hay PDFs para combinar.")
 
