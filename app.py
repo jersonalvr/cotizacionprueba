@@ -542,22 +542,6 @@ def main():
     # Mostrar el valor ingresado con formato de moneda
     if oferta_total > 0:
         st.write(f"Monto ingresado: S/ {oferta_total:,.2f}")
-    
-    st.title("Descarga de Constancias")
-    if st.button("Descargar Constancias"):
-        with st.spinner("Descargando constancias..."):
-            try:
-                # Llamada a función de debug
-                resultados = descargar_constancias_debug(ruc, dni)
-                
-                if resultados:
-                    st.success("Descarga completada")
-                    st.write("Archivos descargados:", resultados)
-                else:
-                    st.error("No se pudieron descargar las constancias")
-            
-            except Exception as e:
-                st.error(f"Error en la descarga: {e}")
                 
     # Botón de envío
     if st.button("Generar cotizacion"):
