@@ -19,7 +19,7 @@ import zipfile
 import pyperclip
 from st_copy_to_clipboard import st_copy_to_clipboard
 from streamlit_image_comparison import image_comparison
-import constancia
+from constancia import combinar_pdfs
 import logging
 logging.basicConfig(
 level=logging.INFO, 
