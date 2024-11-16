@@ -1,29 +1,34 @@
-# constancia.py
+import logging
+import os
+import time
+import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select
-import os
-import time
-import json
-from PyPDF2 import PdfMerger
-import logging
-import requests
-from datetime import datetime
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+from PyPDF2 import PdfMerger
+from datetime import datetime
 
+# Configurar logging más detallado
 logging.basicConfig(
-    level=logging.INFO,  # Puedes cambiar a logging.DEBUG para más detalle
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),  # Muestra logs en consola
+        logging.FileHandler('constancia_scraping.log')  # Guarda logs en archivo
+    ]
 )
+logger = logging.getLogger('constancia')
 
 def configure_selenium_driver(output_dir):
     """
-    Configura el driver de Selenium con las opciones necesarias
+    Configura el driver de Selenium con logging detallado
     """
     try:
+        logger.info("Iniciando configuración del driver de Selenium")
+        
         # Configurar opciones de Chrome
         chrome_options = webdriver.ChromeOptions()
         
@@ -47,78 +52,40 @@ def configure_selenium_driver(output_dir):
             options=chrome_options
         )
         
-        logging.info("Driver de Selenium configurado exitosamente")
+        logger.info("Driver de Selenium configurado exitosamente")
         return driver
     
     except Exception as e:
-        logging.error(f"Error al configurar el driver de Selenium: {e}")
-        return None
-    
-def descargar_constancias(ruc, dni, output_dir):
-    try:
-        # Crear directorio de salida si no existe
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Configurar driver
-        driver = configure_selenium_driver(output_dir)
-        
-        if not driver:
-            logging.error("No se pudo configurar el driver de Selenium")
-            return None
-        
-        try:
-            # 1. Descargar RNP
-            logging.info("Descargando constancia RNP...")
-            download_rnp_certificate(ruc, output_dir, driver)
-            
-            # 2. Descargar RUC SUNAT
-            logging.info("Descargando constancia RUC...")
-            download_sunat_ruc_pdf(ruc, output_dir, driver)
-            
-            # 3. Descargar RNSSC
-            logging.info("Descargando constancia RNSSC...")
-            download_rnssc_pdf(dni, output_dir)
-            
-            # 4. Combinar PDFs
-            logging.info("Combinando PDFs...")
-            output_filename = '5. RNP, RUC, RNSSC.pdf'
-            combinar_pdfs(output_dir, output_filename)
-            
-            logging.info("Proceso de descarga completado exitosamente")
-            
-            # Devolver la ruta del PDF combinado
-            return os.path.join(output_dir, output_filename)
-        
-        finally:
-            # Cerrar el driver
-            if driver:
-                driver.quit()
-    
-    except Exception as e:
-        logging.error(f"Error en la descarga de constancias: {e}")
+        logger.error(f"Error al configurar el driver de Selenium: {e}", exc_info=True)
         return None
 
 def download_rnp_certificate(ruc, output_dir, driver):
     """
-    Descarga el certificado RNP para un número de RUC dado
+    Descarga el certificado RNP con logging detallado
     """
     try:
+        logger.info(f"Iniciando descarga de certificado RNP para RUC: {ruc}")
+        
         # Navegar a la página del certificado RNP con el RUC
         url = f"https://www.rnp.gob.pe/Constancia/RNP_Constancia/default_Todos.asp?RUC={ruc}"
         driver.get(url)
+        logger.debug(f"URL de RNP accedida: {url}")
         
         # Esperar alerta si está presente y aceptarla
         try:
             WebDriverWait(driver, 5).until(EC.alert_is_present())
             alert = driver.switch_to.alert
+            alert_text = alert.text
+            logger.info(f"Alerta detectada: {alert_text}")
             alert.accept()
-        except:
-            print(f"No hay alerta presente para el RUC {ruc}")
+        except Exception as e:
+            logger.debug(f"No hay alerta presente: {e}")
         
         # Esperar a que el botón de imprimir esté presente
         print_button = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "btnPrint"))
         )
+        logger.info("Botón de impresión encontrado")
         
         # Activar impresión (que guardará como PDF con nuestras opciones)
         print_button.click()
@@ -126,18 +93,32 @@ def download_rnp_certificate(ruc, output_dir, driver):
         # Esperar a que se complete la descarga
         time.sleep(3)
         
+        # Verificar archivos descargados
+        archivos = os.listdir(output_dir)
+        pdf_rnp = [f for f in archivos if 'RNP_' in f and f.endswith('.pdf')]
+        
+        if pdf_rnp:
+            logger.info(f"Certificado RNP descargado: {pdf_rnp[0]}")
+            return os.path.join(output_dir, pdf_rnp[0])
+        else:
+            logger.warning("No se encontró archivo PDF de RNP después de la descarga")
+            return None
+        
     except Exception as e:
-        print(f"Error detallado para RUC {ruc} en RNP: {str(e)}")
+        logger.error(f"Error detallado para RUC {ruc} en RNP: {str(e)}", exc_info=True)
         raise
 
 def download_sunat_ruc_pdf(ruc, output_dir, driver):
     """
-    Descarga el PDF de SUNAT para un número de RUC dado
+    Descarga el PDF de SUNAT con logging detallado
     """
     try:
+        logger.info(f"Iniciando descarga de RUC para número: {ruc}")
+        
         # Navegar a la página de consulta RUC de SUNAT
         url = 'https://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/FrameCriterioBusquedaWeb.jsp'
         driver.get(url)
+        logger.debug(f"URL de SUNAT accedida: {url}")
         
         # Esperar a que el campo de RUC esté presente
         WebDriverWait(driver, 10).until(
@@ -148,6 +129,7 @@ def download_sunat_ruc_pdf(ruc, output_dir, driver):
         btn_por_ruc = driver.find_element(By.ID, 'btnPorRuc')
         if 'active' not in btn_por_ruc.get_attribute('class'):
             btn_por_ruc.click()
+            logger.debug("Seleccionado búsqueda por RUC")
         
         # Ingresar el número de RUC
         txt_ruc = driver.find_element(By.ID, 'txtRuc')
@@ -157,6 +139,7 @@ def download_sunat_ruc_pdf(ruc, output_dir, driver):
         # Hacer clic en el botón "Buscar"
         btn_buscar = driver.find_element(By.ID, 'btnAceptar')
         btn_buscar.click()
+        logger.info("Búsqueda de RUC iniciada")
         
         # Esperar a que la página de resultados cargue
         WebDriverWait(driver, 10).until(
@@ -168,30 +151,44 @@ def download_sunat_ruc_pdf(ruc, output_dir, driver):
             EC.element_to_be_clickable((By.XPATH, "//button[@onclick='imprimir()']"))
         )
         btn_imprimir.click()
+        logger.info("Botón de impresión RUC clickeado")
         
         # Esperar a que se complete la descarga
         time.sleep(3)
         
+        # Verificar archivos descargados
+        archivos = os.listdir(output_dir)
+        pdf_ruc = [f for f in archivos if 'SUNAT_' in f and f.endswith('.pdf')]
+        
+        if pdf_ruc:
+            logger.info(f"Certificado RUC descargado: {pdf_ruc[0]}")
+            return os.path.join(output_dir, pdf_ruc[0])
+        else:
+            logger.warning("No se encontró archivo PDF de RUC después de la descarga")
+            return None
+        
     except Exception as e:
-        print(f"Error detallado para RUC {ruc} en SUNAT: {str(e)}")
+        logger.error(f"Error detallado para RUC {ruc} en SUNAT: {str(e)}", exc_info=True)
         raise
-
 def download_rnssc_pdf(dni, output_directory):
     """
-    Descarga el PDF de RNSSC utilizando la URL REST.
+    Descarga el PDF de RNSSC utilizando la URL REST con logging detallado.
     """
     try:
-        logging.info(f"Descargando RNSSC para DNI: {dni}")
+        logger.info(f"Iniciando descarga de RNSSC para DNI: {dni}")
         
         # Obtener la fecha y hora actual en el formato requerido
         now = datetime.now()
         fecha_hora = now.strftime("%d-%m-%Y %H:%M:%S")
+        logger.debug(f"Fecha y hora de solicitud: {fecha_hora}")
         
         # Construir la URL de descarga
         url = f"https://www.sanciones.gob.pe/rnssc-rest/rest/sancion/descargar/Usuario%20consulta/NINGUNO/NINGUNO/NINGUNO/DOCUMENTO%20NACIONAL%20DE IDENTIDAD/{dni}/{fecha_hora}"
+        logger.debug(f"URL de descarga RNSSC: {url}")
         
         # Realizar la solicitud GET
-        response = requests.get(url)
+        response = requests.get(url, timeout=30)
+        logger.info(f"Código de respuesta HTTP: {response.status_code}")
         
         # Verificar si la solicitud fue exitosa
         if response.status_code == 200:
@@ -199,33 +196,45 @@ def download_rnssc_pdf(dni, output_directory):
             # Extraer sancionID del contenido si es posible, o generar uno
             sancion_id = f"{int(time.time() * 1000)}"  # Ejemplo de ID basado en timestamp
             filename = f"ConsultaSinResultados_sancionID{sancion_id}.pdf"
-            filepath = os.path.join(output_dir, filename)
+            filepath = os.path.join(output_directory, filename)
             
             # Guardar el contenido PDF
             with open(filepath, 'wb') as f:
                 f.write(response.content)
             
-            logging.info(f"RNSSC descargado exitosamente para DNI {dni} en {filepath}")
+            # Verificar el tamaño del archivo descargado
+            file_size = os.path.getsize(filepath)
+            logger.info(f"RNSSC descargado exitosamente para DNI {dni} en {filepath}")
+            logger.debug(f"Tamaño del archivo: {file_size} bytes")
+            
             return filepath
         else:
-            logging.error(f"Error al descargar RNSSC para DNI {dni}. Estado HTTP: {response.status_code}")
+            logger.error(f"Error al descargar RNSSC para DNI {dni}. Estado HTTP: {response.status_code}")
+            logger.debug(f"Contenido de la respuesta: {response.text}")
             return None
+    
+    except requests.exceptions.RequestException as req_error:
+        logger.error(f"Error de red al descargar RNSSC para DNI {dni}: {str(req_error)}", exc_info=True)
+        return None
+    
     except Exception as e:
-        logging.error(f"Error al descargar RNSSC para DNI {dni}: {str(e)}")
+        logger.error(f"Error al descargar RNSSC para DNI {dni}: {str(e)}", exc_info=True)
         return None
 
 def combinar_pdfs(output_directory, output_filename):
     """
-    Combina los archivos PDF en un solo PDF y elimina los archivos temporales.
+    Combina los archivos PDF en un solo PDF y elimina los archivos temporales con logging detallado.
     """
-    # Configurar logging
-    logger = logging.getLogger(__name__)
+    logger.info("Iniciando proceso de combinación de PDFs")
     
     # Esperar unos segundos para asegurarse de que los archivos hayan sido generados
     time.sleep(5)
 
     # Obtener la lista de archivos PDF en el directorio de salida
-    pdf_files = [f for f in os.listdir(output_directory) if f.endswith('.pdf')]
+    pdf_files = os.listdir(output_directory)
+    pdf_files = [f for f in pdf_files if f.endswith('.pdf')]
+    
+    logger.debug(f"Archivos PDF encontrados: {pdf_files}")
     
     # Identificar los archivos PDF individuales
     pdf_rnp = None
@@ -233,15 +242,16 @@ def combinar_pdfs(output_directory, output_filename):
     pdf_rnssc = None
 
     for filename in pdf_files:
-        if any(keyword in filename.upper() for keyword in ['RNP', 'REGISTRO NACIONAL DE PROVEEDORES']):
+        logger.debug(f"Analizando archivo: {filename}")
+        if 'CONSTANCIA DEL RNP' in filename or 'RNP_' in filename:
             pdf_rnp = os.path.join(output_directory, filename)
-            logger.info(f"PDF de RNP encontrado: {pdf_rnp}")
-        elif any(keyword in filename.upper() for keyword in ['RUC', 'SUNAT']):
+            logger.info(f"PDF RNP encontrado: {filename}")
+        elif 'SUNAT - Consulta RUC' in filename or 'SUNAT_' in filename:
             pdf_ruc = os.path.join(output_directory, filename)
-            logger.info(f"PDF de RUC encontrado: {pdf_ruc}")
-        elif 'RNSSC' in filename or 'ConsultaSinResultados' in filename:
+            logger.info(f"PDF RUC encontrado: {filename}")
+        elif 'ConsultaSinResultados_sancionID' in filename:
             pdf_rnssc = os.path.join(output_directory, filename)
-            logger.info(f"PDF de RNSSC encontrado: {pdf_rnssc}")
+            logger.info(f"PDF RNSSC encontrado: {filename}")
     
     # Verificar que se encontraron todos los PDFs
     pdf_list = []
@@ -268,9 +278,12 @@ def combinar_pdfs(output_directory, output_filename):
         try:
             merger = PdfMerger()
             for pdf in pdf_list:
+                logger.debug(f"Agregando PDF a la combinación: {pdf}")
                 merger.append(pdf)
+            
             merger.write(output_pdf)
             merger.close()
+            
             logger.info(f"PDF combinado guardado como {output_pdf}")
             
             # Eliminar los archivos PDF temporales
@@ -280,12 +293,124 @@ def combinar_pdfs(output_directory, output_filename):
                     logger.info(f"Archivo temporal eliminado: {pdf}")
                 except Exception as e:
                     logger.error(f"Error al eliminar el archivo {pdf}: {str(e)}")
-            
-            return output_pdf
         
-        except Exception as e:
-            logger.error(f"Error al combinar PDFs: {str(e)}")
-            return None
+        except Exception as merge_error:
+            logger.error(f"Error al combinar PDFs: {str(merge_error)}", exc_info=True)
     else:
         logger.warning("No hay PDFs para combinar.")
+
+def descargar_constancias(ruc, dni, output_dir):
+    """
+    Función principal para descargar constancias RNP, RUC y RNSSC con logging detallado
+    """
+    logger.info(f"Iniciando descarga de constancias para RUC: {ruc}, DNI: {dni}")
+    
+    try:
+        # Crear directorio de salida si no existe
+        os.makedirs(output_dir, exist_ok=True)
+        logger.debug(f"Directorio de salida: {output_dir}")
+        
+        # Configurar driver
+        driver = configure_selenium_driver(output_dir)
+        
+        if not driver:
+            logger.error("No se pudo configurar el driver de Selenium")
+            return None
+        
+        try:
+            # 1. Descargar RNP
+            logger.info("Descargando constancia RNP...")
+            download_rnp_certificate(ruc, output_dir, driver)
+            
+            # 2. Descargar RUC SUNAT
+            logger.info("Descargando constancia RUC...")
+            download_sunat_ruc_pdf(ruc, output_dir, driver)
+            
+            # 3. Descargar RNSSC
+            logger.info("Descargando constancia RNSSC...")
+            download_rnssc_pdf(dni, output_dir)
+            
+            # 4. Combinar PDFs
+            logger.info("Combinando PDFs...")
+            output_filename = '5. RNP, RUC, RNSSC.pdf'
+            combinar_pdfs(output_dir, output_filename)
+            
+            logger.success("Proceso de descarga completado exitosamente")
+            
+            # Devolver la ruta del PDF combinado
+            output_path = os.path.join(output_dir, output_filename)
+            
+            # Verificar que el archivo combinado existe
+            if os.path.exists(output_path):
+                logger.info(f"PDF combinado encontrado en: {output_path}")
+                file_size = os.path.getsize(output_path)
+                logger.debug(f"Tamaño del PDF combinado: {file_size} bytes")
+                return output_path
+            else:
+                logger.error("El archivo PDF combinado no se encontró después de la combinación")
+                return None
+        
+        except Exception as process_error:
+            logger.error(f"Error durante el proceso de descarga de constancias: {str(process_error)}", exc_info=True)
+            return None
+        
+        finally:
+            # Cerrar el driver
+            if driver:
+                try:
+                    driver.quit()
+                    logger.info("Driver de Selenium cerrado correctamente")
+                except Exception as driver_close_error:
+                    logger.error(f"Error al cerrar el driver: {str(driver_close_error)}")
+    
+    except Exception as main_error:
+        logger.error(f"Error general en la descarga de constancias: {str(main_error)}", exc_info=True)
         return None
+
+# Configuración adicional para manejar el registro
+def setup_logging():
+    """
+    Configuración avanzada de logging
+    """
+    # Configurar un formateador más detallado
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    # Configurar manejador de consola
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+
+    # Configurar manejador de archivo
+    file_handler = logging.FileHandler('constancia_scraping_full.log')
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+
+    # Configurar el logger principal
+    logger = logging.getLogger('constancia')
+    logger.setLevel(logging.DEBUG)
+    
+    # Limpiar cualquier manejador existente
+    logger.handlers.clear()
+    
+    # Agregar los nuevos manejadores
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+
+    return logger
+
+# Método para agregar un método de éxito personalizado
+def add_success_method():
+    """
+    Agrega un método de registro de éxito personalizado
+    """
+    def success(self, message, *args, **kwargs):
+        return self.log(logging.INFO, f"✅ SUCCESS: {message}", *args, **kwargs)
+    
+    logging.Logger.success = success
+
+# Configuración inicial
+setup_logging()
+add_success_method()
