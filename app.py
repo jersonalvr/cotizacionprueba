@@ -544,8 +544,6 @@ def main():
         st.write(f"Monto ingresado: S/ {oferta_total:,.2f}")
     
     st.title("Descarga de Constancias")
-    # Verificación inicial
-    verificar_configuracion_selenium()
     if st.button("Descargar Constancias"):
         with st.spinner("Descargando constancias..."):
             try:
