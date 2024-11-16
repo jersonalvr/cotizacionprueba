@@ -32,7 +32,7 @@ def configure_selenium_driver(output_dir):
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--disable-gpu')  # Añadir esta línea
-        chrome_options.add_argument('--remote-debugging-port=9222')  # Añadir esta línea
+        chrome_options.add_argument('--remote-infoging-port=9222')  # Añadir esta línea
         
         # Preferencias de descarga
         prefs = {
@@ -105,7 +105,7 @@ def download_sunat_ruc_pdf(ruc, output_dir, driver=None):
         # Navegar a la página de consulta RUC de SUNAT
         url = 'https://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/FrameCriterioBusquedaWeb.jsp'
         driver.get(url)
-        logger.debug(f"URL de SUNAT accedida: {url}")
+        logger.info(f"URL de SUNAT accedida: {url}")
         
         # Esperar a que el campo de RUC esté presente
         WebDriverWait(driver, 10).until(
@@ -116,7 +116,7 @@ def download_sunat_ruc_pdf(ruc, output_dir, driver=None):
         btn_por_ruc = driver.find_element(By.ID, 'btnPorRuc')
         if 'active' not in btn_por_ruc.get_attribute('class'):
             btn_por_ruc.click()
-            logger.debug("Seleccionado búsqueda por RUC")
+            logger.info("Seleccionado búsqueda por RUC")
         
         # Ingresar el número de RUC
         txt_ruc = driver.find_element(By.ID, 'txtRuc')
@@ -214,7 +214,7 @@ def combinar_pdfs(output_directory, output_filename):
     pdf_files = os.listdir(output_directory)
     pdf_files = [f for f in pdf_files if f.endswith('.pdf')]
     
-    logger.debug(f"Archivos PDF encontrados: {pdf_files}")
+    logger.info(f"Archivos PDF encontrados: {pdf_files}")
     
     # Identificar los archivos PDF individuales
     pdf_rnp = None
@@ -222,7 +222,7 @@ def combinar_pdfs(output_directory, output_filename):
     pdf_rnssc = None
 
     for filename in pdf_files:
-        logger.debug(f"Analizando archivo: {filename}")
+        logger.info(f"Analizando archivo: {filename}")
         if 'CONSTANCIA DEL RNP' in filename or 'RNP_' in filename:
             pdf_rnp = os.path.join(output_directory, filename)
             logger.info(f"PDF RNP encontrado: {filename}")
@@ -258,7 +258,7 @@ def combinar_pdfs(output_directory, output_filename):
         try:
             merger = PdfMerger()
             for pdf in pdf_list:
-                logger.debug(f"Agregando PDF a la combinación: {pdf}")
+                logger.info(f"Agregando PDF a la combinación: {pdf}")
                 merger.append(pdf)
             
             merger.write(output_pdf)
