@@ -367,32 +367,34 @@ def descargar_constancias(ruc, dni, output_dir):
 # Configuración adicional para manejar el registro
 def setup_logging():
     """
-    Configuración avanzada de logging
+    Configuración optimizada de logging
     """
-    # Configurar un formateador más detallado
+    # Usar un formateador más simple
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+        '%(asctime)s - %(levelname)s - %(message)s', 
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    # Configurar manejador de consola
+    # Configurar manejador de consola con menos detalle
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(logging.WARNING)  # Cambiar a WARNING para reducir logs
     console_handler.setFormatter(formatter)
 
-    # Configurar manejador de archivo
-    file_handler = logging.FileHandler('constancia_scraping_full.log')
-    file_handler.setLevel(logging.DEBUG)
+    # Configurar manejador de archivo con menos frecuencia de escritura
+    file_handler = logging.FileHandler('constancia_scraping.log', delay=True)
+    file_handler.setLevel(logging.ERROR)  # Solo guardar errores en archivo
     file_handler.setFormatter(formatter)
 
-    # Configurar el logger principal
+    # Obtener el logger de manera más eficiente
     logger = logging.getLogger('constancia')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.ERROR)  # Nivel de error más alto
     
-    # Limpiar cualquier manejador existente
-    logger.handlers.clear()
+    # Limpiar manejadores de forma más segura
+    if logger.handlers:
+        for handler in logger.handlers[:]:
+            logger.removeHandler(handler)
     
-    # Agregar los nuevos manejadores
+    # Agregar manejadores de forma más ligera
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
 
