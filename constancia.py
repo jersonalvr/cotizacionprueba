@@ -69,10 +69,11 @@ def configure_selenium_driver(output_dir):
         logger.error(f"Error al configurar el driver de Selenium: {e}", exc_info=True)
         return None
 
-def download_rnp_certificate(ruc, output_directory, driver):
-    """
-    Descarga el certificado RNP con logging detallado
-    """
+def download_rnp_certificate(ruc, output_dir, driver=None):
+    if driver is None:
+        # Configurar driver si no se proporciona
+        driver = configure_selenium_driver(output_dir)
+    
     try:
         logger.info(f"Iniciando descarga de certificado RNP para RUC: {ruc}")
         
@@ -113,15 +114,18 @@ def download_rnp_certificate(ruc, output_directory, driver):
         else:
             logger.warning("No se encontró archivo PDF de RNP después de la descarga")
             return None
-        
+        finally:
+        # Cerrar driver solo si se creó en esta función
+        if driver and not isinstance(driver, webdriver.Chrome):
+            driver.quit()
+            
     except Exception as e:
         logger.error(f"Error detallado para RUC {ruc} en RNP: {str(e)}", exc_info=True)
         raise
 
-def download_sunat_ruc_pdf(ruc, output_directory, driver):
-    """
-    Descarga el PDF de SUNAT con logging detallado
-    """
+def download_sunat_ruc_pdf(ruc, output_dir, driver=None):
+    if driver is None:
+        driver = configure_selenium_driver(output_dir)
     try:
         logger.info(f"Iniciando descarga de RUC para número: {ruc}")
         
@@ -176,61 +180,57 @@ def download_sunat_ruc_pdf(ruc, output_directory, driver):
         else:
             logger.warning("No se encontró archivo PDF de RUC después de la descarga")
             return None
-        
+        finally:
+        if driver and not isinstance(driver, webdriver.Chrome):
+            driver.quit()
     except Exception as e:
         logger.error(f"Error detallado para RUC {ruc} en SUNAT: {str(e)}", exc_info=True)
         raise
-def download_rnssc_pdf(dni, output_directory):
-    """
-    Descarga el PDF de RNSSC utilizando la URL REST con logging detallado.
-    """
+def download_rnssc_pdf(dni, output_dir):
     try:
         logger.info(f"Iniciando descarga de RNSSC para DNI: {dni}")
         
-        # Obtener la fecha y hora actual en el formato requerido
-        now = datetime.now()
-        fecha_hora = now.strftime("%d-%m-%Y %H:%M:%S")
-        logger.debug(f"Fecha y hora de solicitud: {fecha_hora}")
+        # Configurar headers y session para mejorar la conexión
+        session = requests.Session()
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'application/pdf',
+            'Connection': 'keep-alive'
+        })
         
-        # Construir la URL de descarga
+        # Aumentar timeout y agregar reintentos
         url = f"https://www.sanciones.gob.pe/rnssc-rest/rest/sancion/descargar/Usuario%20consulta/NINGUNO/NINGUNO/NINGUNO/DOCUMENTO%20NACIONAL%20DE IDENTIDAD/{dni}/{fecha_hora}"
-        logger.debug(f"URL de descarga RNSSC: {url}")
         
-        # Realizar la solicitud GET
-        response = requests.get(url, timeout=30)
-        logger.info(f"Código de respuesta HTTP: {response.status_code}")
+        # Configurar reintentos
+        retries = Retry(
+            total=3,  # Número de reintentos
+            backoff_factor=0.3,  # Tiempo entre reintentos
+            status_forcelist=[500, 502, 503, 504]  # Códigos de error que disparan reintento
+        )
+        adapter = HTTPAdapter(max_retries=retries)
+        session.mount('https://', adapter)
+        
+        # Realizar solicitud con mayor timeout
+        response = session.get(url, timeout=(10, 30))  # (connect timeout, read timeout)
         
         # Verificar si la solicitud fue exitosa
         if response.status_code == 200:
-            # Definir el nombre del archivo siguiendo el patrón
-            # Extraer sancionID del contenido si es posible, o generar uno
-            sancion_id = f"{int(time.time() * 1000)}"  # Ejemplo de ID basado en timestamp
-            filename = f"ConsultaSinResultados_sancionID{sancion_id}.pdf"
+            # Guardar PDF
+            filename = f"ConsultaSinResultados_sancionID_{int(time.time())}.pdf"
             filepath = os.path.join(output_directory, filename)
             
-            # Guardar el contenido PDF
             with open(filepath, 'wb') as f:
                 f.write(response.content)
             
-            # Verificar el tamaño del archivo descargado
-            file_size = os.path.getsize(filepath)
-            logger.info(f"RNSSC descargado exitosamente para DNI {dni} en {filepath}")
-            logger.debug(f"Tamaño del archivo: {file_size} bytes")
-            
+            logger.info(f"PDF RNSSC descargado: {filename}")
             return filepath
         else:
-            logger.error(f"Error al descargar RNSSC para DNI {dni}. Estado HTTP: {response.status_code}")
-            logger.debug(f"Contenido de la respuesta: {response.text}")
+            logger.error(f"Error al descargar RNSSC. Código de estado: {response.status_code}")
             return None
     
-    except requests.exceptions.RequestException as req_error:
-        logger.error(f"Error de red al descargar RNSSC para DNI {dni}: {str(req_error)}", exc_info=True)
+    except (requests.exceptions.RequestException, IOError) as e:
+        logger.error(f"Error de red al descargar RNSSC: {e}")
         return None
-    
-    except Exception as e:
-        logger.error(f"Error al descargar RNSSC para DNI {dni}: {str(e)}", exc_info=True)
-        return None
-
 def combinar_pdfs(output_directory, output_filename):
     """
     Combina los archivos PDF en un solo PDF y elimina los archivos temporales.
