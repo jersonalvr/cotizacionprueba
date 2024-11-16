@@ -17,7 +17,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),  # Muestra logs en consola
-        logging.FileHandler('constancia_scraping.log')  # Guarda logs en archivo
     ]
 )
 
