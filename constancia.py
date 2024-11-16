@@ -420,3 +420,4 @@ def add_success_method():
 # Configuración inicial
 setup_logging()
 add_success_method()
+__all__ = ['combinar_pdfs']
