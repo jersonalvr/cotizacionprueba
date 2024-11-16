@@ -612,7 +612,6 @@ def main():
     # Verificación inicial
     verificar_configuracion_selenium()
     if st.button("Descargar Constancias"):
-        configure_minimal_logging()
         with st.spinner("Descargando constancias..."):
             try:
                 # Llamada a función de debug
