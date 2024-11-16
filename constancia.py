@@ -14,6 +14,11 @@ from datetime import datetime
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
+logging.basicConfig(
+    level=logging.INFO,  # Puedes cambiar a logging.DEBUG para más detalle
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
 def configure_selenium_driver(output_dir):
     """
     Configura el driver de Selenium con las opciones necesarias
@@ -213,6 +218,9 @@ def combinar_pdfs(output_directory, output_filename):
     """
     Combina los archivos PDF en un solo PDF y elimina los archivos temporales.
     """
+    # Configurar logging
+    logger = logging.getLogger(__name__)
+    
     # Esperar unos segundos para asegurarse de que los archivos hayan sido generados
     time.sleep(5)
 
@@ -227,50 +235,57 @@ def combinar_pdfs(output_directory, output_filename):
     for filename in pdf_files:
         if any(keyword in filename.upper() for keyword in ['RNP', 'REGISTRO NACIONAL DE PROVEEDORES']):
             pdf_rnp = os.path.join(output_directory, filename)
+            logger.info(f"PDF de RNP encontrado: {pdf_rnp}")
         elif any(keyword in filename.upper() for keyword in ['RUC', 'SUNAT']):
             pdf_ruc = os.path.join(output_directory, filename)
+            logger.info(f"PDF de RUC encontrado: {pdf_ruc}")
         elif 'RNSSC' in filename or 'ConsultaSinResultados' in filename:
             pdf_rnssc = os.path.join(output_directory, filename)
+            logger.info(f"PDF de RNSSC encontrado: {pdf_rnssc}")
     
     # Verificar que se encontraron todos los PDFs
     pdf_list = []
     if pdf_rnp:
         pdf_list.append(pdf_rnp)
-        print(f"PDF de RNP encontrado: {pdf_rnp}")
     else:
-        print("No se encontró el PDF de RNP.")
+        logger.warning("No se encontró el PDF de RNP.")
     
     if pdf_ruc:
         pdf_list.append(pdf_ruc)
-        print(f"PDF de RUC encontrado: {pdf_ruc}")
     else:
-        print("No se encontró el PDF de RUC.")
+        logger.warning("No se encontró el PDF de RUC.")
     
     if pdf_rnssc:
         pdf_list.append(pdf_rnssc)
-        print(f"PDF de RNSSC encontrado: {pdf_rnssc}")
     else:
-        print("No se encontró el PDF de RNSSC.")
+        logger.warning("No se encontró el PDF de RNSSC.")
     
     # Ruta del PDF combinado de salida
     output_pdf = os.path.join(output_directory, output_filename)
     
     # Combinar los PDFs
     if pdf_list:
-        merger = PdfMerger()
-        for pdf in pdf_list:
-            merger.append(pdf)
-        merger.write(output_pdf)
-        merger.close()
-        print(f"PDF combinado guardado como {output_pdf}")
+        try:
+            merger = PdfMerger()
+            for pdf in pdf_list:
+                merger.append(pdf)
+            merger.write(output_pdf)
+            merger.close()
+            logger.info(f"PDF combinado guardado como {output_pdf}")
+            
+            # Eliminar los archivos PDF temporales
+            for pdf in pdf_list:
+                try:
+                    os.remove(pdf)
+                    logger.info(f"Archivo temporal eliminado: {pdf}")
+                except Exception as e:
+                    logger.error(f"Error al eliminar el archivo {pdf}: {str(e)}")
+            
+            return output_pdf
         
-        # Eliminar los archivos PDF temporales
-        for pdf in pdf_list:
-            try:
-                os.remove(pdf)
-                print(f"Archivo temporal eliminado: {pdf}")
-            except Exception as e:
-                print(f"Error al eliminar el archivo {pdf}: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error al combinar PDFs: {str(e)}")
+            return None
     else:
-        print("No hay PDFs para combinar.")
+        logger.warning("No hay PDFs para combinar.")
         return None
