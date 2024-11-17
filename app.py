@@ -19,12 +19,9 @@ import zipfile
 import pyperclip
 from st_copy_to_clipboard import st_copy_to_clipboard
 from streamlit_image_comparison import image_comparison
-from constancia import combinar_pdfs
+from constancia import combinar_pdfs, setup_logging
 import logging
-logging.basicConfig(
-level=logging.INFO, 
-format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+setup_logging()
 # Determinar la ruta base de la aplicación
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
