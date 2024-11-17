@@ -74,7 +74,7 @@ def safe_download(download_func):
             return None
     return wrapper
 
-def configure_selenium_driver(output_dir):
+def configure_selenium_driver(output_directory):
     """
     Configuración de driver Selenium optimizada
     """
@@ -92,7 +92,7 @@ def configure_selenium_driver(output_dir):
         
         # Preferencias de descarga
         prefs = {
-            'download.default_directory': output_dir,
+            'download.default_directory': output_directory,
             'download.prompt_for_download': False,
             'download.directory_upgrade': True,
             'plugins.always_open_pdf_externally': True
@@ -118,7 +118,7 @@ def configure_selenium_driver(output_dir):
 
 @safe_download
 @timed_operation
-def download_rnp_certificate(ruc, output_dir, driver):
+def download_rnp_certificate(ruc, output_directory, driver):
     """
     Descarga de certificado RNP con manejo de errores
     """
@@ -148,16 +148,16 @@ def download_rnp_certificate(ruc, output_dir, driver):
         time.sleep(3)
         
         # Buscar archivo descargado
-        archivos = os.listdir(output_dir)
+        archivos = os.listdir(output_directory)
         pdf_rnp = [f for f in archivos if 'RNP_' in f and f.endswith('.pdf')]
         
-        return os.path.join(output_dir, pdf_rnp[0]) if pdf_rnp else None
+        return os.path.join(output_directory, pdf_rnp[0]) if pdf_rnp else None
     
     except Exception as e:
         log_with_condition(logger, 'error', f"Error en descarga RNP: {e}", condition=True)
         return None
 
-def download_sunat_ruc_pdf(ruc, output_dir, driver):
+def download_sunat_ruc_pdf(ruc, output_directory, driver):
     """
     Descarga de PDF de RUC SUNAT
     """
@@ -193,16 +193,16 @@ def download_sunat_ruc_pdf(ruc, output_dir, driver):
         time.sleep(3)
         
         # Buscar archivo descargado
-        archivos = os.listdir(output_dir)
+        archivos = os.listdir(output_directory)
         pdf_ruc = [f for f in archivos if 'SUNAT_' in f and f.endswith('.pdf')]
         
-        return os.path.join(output_dir, pdf_ruc[0]) if pdf_ruc else None
+        return os.path.join(output_directory, pdf_ruc[0]) if pdf_ruc else None
     
     except Exception as e:
         log_with_condition(logger, 'error', f"Error en descarga RUC: {e}", condition=True)
         return None
 
-def download_rnssc_pdf(dni, output_dir):
+def download_rnssc_pdf(dni, output_directory):
     """
     Descarga de PDF de RNSSC
     """
@@ -224,7 +224,7 @@ def download_rnssc_pdf(dni, output_dir):
         if response.status_code == 200:
             # Generar nombre de archivo
             filename = f"ConsultaSinResultados_sancionID{int(time.time() * 1000)}.pdf"
-            filepath = os.path.join(output_dir, filename)
+            filepath = os.path.join(output_directory, filename)
             
             # Guardar PDF
             with open(filepath, 'wb') as f:
@@ -281,7 +281,7 @@ def combinar_pdfs(output_directory, output_filename):
         log_with_condition(logger, 'error', f"Error combinando PDFs: {e}", condition=True)
         return None
 
-def descargar_constancias(ruc, dni, output_dir):
+def descargar_constancias(ruc, dni, output_directory):
     """
     Función principal de descarga de constancias
     """
@@ -289,10 +289,10 @@ def descargar_constancias(ruc, dni, output_dir):
     
     try:
         # Preparar directorio
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(output_directory, exist_ok=True)
         
         # Configurar driver
-        driver = configure_selenium_driver(output_dir)
+        driver = configure_selenium_driver(output_directory)
         
         if not driver:
             log_with_condition(logger, 'error', "No se pudo configurar Selenium Driver", condition=True)
@@ -303,23 +303,23 @@ def descargar_constancias(ruc, dni, output_dir):
             log_with_condition(logger, 'info', f"Iniciando descargas para RUC: {ruc}, DNI: {dni}")
             
             # Descargar RNP
-            rnp_result = download_rnp_certificate(ruc, output_dir, driver)
+            rnp_result = download_rnp_certificate(ruc, output_directory, driver)
             log_with_condition(logger, 'info', f"Resultado RNP: {rnp_result}", 
                                condition=rnp_result is None)
             
             # Descargar RUC SUNAT
-            ruc_result = download_sunat_ruc_pdf(ruc, output_dir, driver)
+            ruc_result = download_sunat_ruc_pdf(ruc, output_directory, driver)
             log_with_condition(logger, 'info', f"Resultado RUC: {ruc_result}", 
                                condition=ruc_result is None)
             
             # Descargar RNSSC
-            rnssc_result = download_rnssc_pdf(dni, output_dir)
+            rnssc_result = download_rnssc_pdf(dni, output_directory)
             log_with_condition(logger, 'info', f"Resultado RNSSC: {rnssc_result}", 
                                condition=rnssc_result is None)
             
             # Combinar PDFs
             output_filename = '5. RNP, RUC, RNSSC.pdf'
-            combined_pdf = combinar_pdfs(output_dir, output_filename)
+            combined_pdf = combinar_pdfs(output_directory, output_filename)
             
             if combined_pdf:
                 log_with_condition(logger, 'info', f"PDF combinado generado: {combined_pdf}")
