@@ -281,7 +281,6 @@ def combinar_pdfs(output_directory, output_filename):
         log_with_condition(logger, 'error', f"Error combinando PDFs: {e}", condition=True)
         return None
 
-
 def descargar_constancias(ruc, dni, output_dir):
     """
     Función principal de descarga de constancias
